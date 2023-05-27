@@ -1,41 +1,51 @@
 import { StyledForm } from "./StyledForm";
 import { ZodType, z } from "zod";
-import {useForm, FieldErrors} from 'react-hook-form'
-import {zodResolver} from '@hookform/resolvers/zod'
+import { useForm, FieldErrors } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-const FIRSTNAME = "firstName"
-const LASTNAME = "lastName"
-const EMAIL = "email"
-const AGE = "age"
-const PASSWORD = "password"
-const CONFIRMPASSWORD = "confirmPassword"
+const FIRSTNAME = "firstName";
+const LASTNAME = "lastName";
+const EMAIL = "email";
+const AGE = "age";
+const PASSWORD = "password";
+const CONFIRMPASSWORD = "confirmPassword";
 
 type FormData = {
-  [FIRSTNAME]: string,
-  [LASTNAME]: string,
-  [EMAIL]: string,
-  [AGE]: number,
-  [PASSWORD]: string,
-  [CONFIRMPASSWORD]: string
-}
+  [FIRSTNAME]: string;
+  [LASTNAME]: string;
+  [EMAIL]: string;
+  [AGE]: number;
+  [PASSWORD]: string;
+  [CONFIRMPASSWORD]: string;
+};
 
-type ErrorProps = {
-  errors: FieldErrors
-}
+// type ErrorProps = {
+//   errors: FieldErrors
+// }
 
-const Errors = ({errors}: ErrorProps) => {
-  console.log(errors)
+const Errors = ({ errors }: { errors: FieldErrors }) => {
+  console.log(errors);
   return (
     <>
-      {errors[FIRSTNAME] && <span>First Name: {errors[FIRSTNAME].message?.toString()}</span>}
-      {errors[LASTNAME] && <span>Last Name: {errors[LASTNAME].message?.toString()}</span>}
+      {errors[FIRSTNAME] && (
+        <span>First Name: {errors[FIRSTNAME].message?.toString()}</span>
+      )}
+      {errors[LASTNAME] && (
+        <span>Last Name: {errors[LASTNAME].message?.toString()}</span>
+      )}
       {errors[EMAIL] && <span>Email: {errors[EMAIL].message?.toString()}</span>}
       {errors[AGE] && <span>Age: {errors[AGE].message?.toString()}</span>}
-      {errors[PASSWORD] && <span>Password: {errors[PASSWORD].message?.toString()}</span>}
-      {errors[CONFIRMPASSWORD] && <span>Confirm Password: {errors[CONFIRMPASSWORD].message?.toString()}</span>}
+      {errors[PASSWORD] && (
+        <span>Password: {errors[PASSWORD].message?.toString()}</span>
+      )}
+      {errors[CONFIRMPASSWORD] && (
+        <span>
+          Confirm Password: {errors[CONFIRMPASSWORD].message?.toString()}
+        </span>
+      )}
     </>
-  )
-}
+  );
+};
 
 function App() {
   // schema of our form data and we pass a type to zod for our form data
@@ -45,40 +55,102 @@ function App() {
       [LASTNAME]: z.string().min(2).max(30),
       [EMAIL]: z.string().email(),
       [AGE]: z.number().min(18).max(70),
-      [PASSWORD]: z.string().min(5).max(20),
+      [PASSWORD]: z
+        .string()
+        .min(5)
+        .max(20)
+        .refine(
+          (value) => {
+            const hasSpecialCharacter = /[^a-zA-Z0-9]/.test(value);
+            const hasNumber = /\d/.test(value);
+            const hasCapitalLetter = /[A-Z]/.test(value);
+
+            return hasSpecialCharacter && hasNumber && hasCapitalLetter;
+          },
+          {
+            message:
+              "Password must contain at least 1 uppercase, 1 lowercase letter, 1 number and 1 special character.",
+          }
+        ),
       [CONFIRMPASSWORD]: z.string().min(5).max(20),
     })
-    .refine(data => data[PASSWORD] === data[CONFIRMPASSWORD],{
+    .refine((data) => data[PASSWORD] === data[CONFIRMPASSWORD], {
       message: "Passwords don't match",
       path: [CONFIRMPASSWORD],
       //this path object means the callback of refine will be called when validating CONFIRMPASSWORD, not on PASSWORD
-    })
+    });
 
-    // register funciton registers all the inputs with the schema.
-    const {register, handleSubmit, formState: {errors}} = useForm<FormData>({resolver: zodResolver(schema)})
+  // register funciton registers all the inputs with the schema.
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-    const submitData = (data: FormData) => {
-      console.log("It worked", data)
-    }
+  const submitData = (data: FormData) => {
+    console.log("It worked", data);
+  };
 
-
-    // when we click submit button, the data is first validated, then the function passed to handleSubmit will be called.
+  // when we click submit button, the data is first validated, then the function passed to handleSubmit will be called.
   return (
     <div className="app">
       <StyledForm onSubmit={handleSubmit(submitData)}>
-        <Errors errors={errors}/>
+        <Errors errors={errors} />
         <div className="name-inputs">
-          <input type="text" id="firstName" placeholder="First Name" {...register(FIRSTNAME)}/>
-          
-          <input type="text" id="lastName" placeholder="Last Name" {...register(LASTNAME)}/>
+          <input
+            type="text"
+            id="firstName"
+            placeholder="First Name"
+            {...register(FIRSTNAME)}
+          />
+
+          <input
+            type="text"
+            id="lastName"
+            placeholder="Last Name"
+            {...register(LASTNAME)}
+          />
         </div>
         <div className="email-phone-input">
-          <input type="email" id="email" placeholder="Email" {...register(EMAIL)}/>
-          <input type="number" id="age" placeholder="Age" {...register(AGE, {valueAsNumber: true})}/>
+          <input
+            type="email"
+            id="email"
+            placeholder="Email"
+            {...register(EMAIL, {
+              validate: {
+                isBlackListed: (fieldValue) => {
+                  return fieldValue.endsWith("tempmail.com")
+                    ? "Domain is banned!!!"
+                    : "";
+                },
+              },
+            })}
+          />
+          <input
+            type="string"
+            id="age"
+            placeholder="Age"
+            {...register(AGE, {
+              valueAsNumber: true,
+              validate: (fieldValue) => {
+                return Number.isInteger(fieldValue) || "Please enter a number.";
+              },
+            })}
+          />
         </div>
 
-        <input type="password" id="password" placeholder="Password" {...register(PASSWORD)} />
-        <input type="password" id="cpassword" placeholder="Confirm Password" {...register(CONFIRMPASSWORD)} />
+        <input
+          type="password"
+          id="password"
+          placeholder="Password"
+          {...register(PASSWORD)}
+        />
+        <input
+          type="password"
+          id="cpassword"
+          placeholder="Confirm Password"
+          {...register(CONFIRMPASSWORD)}
+        />
         <button>Submit</button>
       </StyledForm>
     </div>
